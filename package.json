@@ -1,0 +1,17 @@
+{
+  "name": "speed-colors-online",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exi>
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+
+  "scripts": {
+    "start": "node app.js"
+  }
+}
