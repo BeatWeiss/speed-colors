@@ -278,6 +278,5 @@ function starteNaechstenBlitz() {
 }
 
 http.listen(PORT, '0.0.0.0', () => {
-	console.log(Spiel-Server läuft auf Port ${PORT});
-	}
-);
+    console.log("Spiel-Server läuft auf Port " + PORT);
+});
