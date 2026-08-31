@@ -1,17 +1,16 @@
 {
   "name": "speed-colors-online",
   "version": "1.0.0",
-  "description": "",
+  "description": "Speed Colors Multiplayer Game",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit>
+    "start": "node app.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs"
-
-  "scripts": {
-    "start": "node app.js"
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
   }
 }
