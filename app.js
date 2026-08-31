@@ -225,12 +225,12 @@ io.on('connection', (socket) => {
 		if (colorId === room.zielFarbe.id)	{
 			room.rundenAktiv = false;
 			spieler.score += 1;
-			room.log = `⚡ ${spieler.name} war am schnellsten! (+1 Punkt)`;
+			room.log = "⚡ " + spieler.name + " war am schnellsten! (+1 Punkt)";
 			
 			socket.emit('successFeedback');
 			if (spieler.score >= 10) {
 				room.winner = spieler.name;
-				room.log = `👑 ${spieler.name} GEWINNT DAS SPIEL! 👑`;
+				room.log = "👑 " + spieler.name + " GEWINNT DAS SPIEL! 👑";
 			
 				io.emit('roomUpdate', room);
 				setTimeout(() => { 
@@ -243,7 +243,7 @@ io.on('connection', (socket) => {
 			}
 		} else {
 			spieler.score -= 1;
-			room.log = `❌ ${spieler.name} hat falsch gedrückt! (-1 Punkt)`;
+			room.log = "❌ " + spieler.name + " hat falsch gedrückt! (-1 Punkt)";
 			io.emit('roomUpdate', room);
 		}
 	});
