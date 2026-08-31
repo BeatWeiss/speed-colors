@@ -3,7 +3,7 @@ const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Farb-Definitionen für das Spiel
 const FARBEN = [
@@ -124,24 +124,21 @@ app.get('/', (req, res) => {
 				}
 
 				function pressColor(colorId) {
-					// Lokaler Vorab-Check für den visuellen Strafpunkt-Effekt
 					if (colorId !== aktuellerFarbId) {
 						triggerWrongEffects();
 					}
 					socket.emit('actionPress', colorId);
 				}
 
-				// Lokale Effekte bei falschem Drücken (Blitz & lange Vibration)
 				function triggerWrongEffects() {
 					document.body.classList.add('wrong-flash');
-					if (navigator.vibrate) navigator.vibrate(300); // 300ms Vibration
+					if (navigator.vibrate) navigator.vibrate(300);
 					setTimeout(() => {
 						document.body.classList.remove('wrong-flash');
 					}, 150);
 				}
 
 				socket.on('roomUpdate', (data) => {
-					// Lobby-Liste updaten
 					const lobbyList = document.getElementById('lobbyList');
 					lobbyList.innerHTML = data.players.map(p => \`<li class="player-item"><span>\${p.name}</span> <span>\${p.score} Pkt.</span></li>\`).join('');
 
@@ -156,8 +153,6 @@ app.get('/', (req, res) => {
 						document.getElementById('gameLog').innerText = data.log;
 						
 						const targetView = document.getElementById('targetView');
-						
-						// Erkennen, ob eine NEUE Farbe aufgeleuchtet ist
 						let vorherigeFarbe = aktuellerFarbId;
 						
 						if (data.rundenAktiv && data.zielFarbe) {
@@ -165,10 +160,9 @@ app.get('/', (req, res) => {
 							targetView.innerText = data.zielFarbe.name;
 							targetView.style.background = data.zielFarbe.hex;
 							
-							// Wenn die Farbe gerade frisch erschienen ist: Animation triggern
 							if(vorherigeFarbe !== aktuellerFarbId) {
 								targetView.classList.remove('pop-effect');
-								void targetView.offsetWidth; // CSS Reflow erzwingen
+								void targetView.offsetWidth;
 								targetView.classList.add('pop-effect');
 							}
 						} else {
@@ -178,7 +172,6 @@ app.get('/', (req, res) => {
 							targetView.classList.remove('pop-effect');
 						}
 
-						// Rangliste rendern
 						const gamePlayerList = document.getElementById('gamePlayerList');
 						const sortierteSpieler = [...data.players].sort((a,b) => b.score - a.score);
 						gamePlayerList.innerHTML = sortierteSpieler.map(p => \`
@@ -190,121 +183,101 @@ app.get('/', (req, res) => {
 					}
 				});
 
-				// Signal vom Server, dass man erfolgreich war (Kurze Erfolgs-Vibration)
 				socket.on('successFeedback', () => {
-					if (navigator.vibrate) navigator.vibrate([80]); // Kurzer Vibrations-Impuls
+					if (navigator.vibrate) navigator.vibrate([80]);
 				});
 
 				socket.on('err', (msg) => alert(msg));
 			</script>
 		</body>
-		
-		`);
-		
-	}
-	
-);
-	
+		</html>
+    `);
+});
+
 // SERVER LOGIK 
-(Socket.io)io.on('connection', (socket) => {
+io.on('connection', (socket) => {
 	socket.on('joinRoom', (name) => {
-	
 		if(room.active) return socket.emit('err', 'Das Spiel läuft bereits!');
-		
-		if(room.players.length >= 6) 
-		return socket.emit('err', 'Raum voll (max 6 Spieler)!');
+		if(room.players.length >= 6) return socket.emit('err', 'Raum voll (max 6 Spieler)!');
 		
 		room.players.push({ id: socket.id, name: name, score: 0 });
 		io.emit('roomUpdate', room);
-	}		
-	);
+	});
 		
 	socket.on('requestStart', () => {		
-		if(room.players.length < 2) 
-		return socket.emit('err', 'Es werden mindestens 2 Spieler benötigt!');
+		if(room.players.length < 2) return socket.emit('err', 'Es werden mindestens 2 Spieler benötigt!');
+		if(room.players[0].id !== socket.id) return socket.emit('err', 'Nur der Host kann starten.');
 		
-		if(room.players[0].id !== socket.id) 
-		return socket.emit('err', 'Nur der Host kann starten.');
-		
-		room.active = true;room.winner = null;
+		room.active = true;
+		room.winner = null;
 		room.players.forEach(p => p.score = 0);
 		room.log = "Das Spiel beginnt! Gleich geht's los...";
-		io.emit('roomUpdate', room);starteNaechstenBlitz();
-	}
-	);
+		io.emit('roomUpdate', room);
+		starteNaechstenBlitz();
+	});
 		
 	socket.on('actionPress', (colorId) => {
-		if (!room.rundenAktiv || room.winner) 
-		return;
+		if (!room.rundenAktiv || room.winner) return;
 	
-	const spieler = room.players.find(p => p.id === socket.id);
-	if (!spieler) 
-	return;
-	
-	if (colorId === room.zielFarbe.id)	{
-		// RICHTIGE FARBE
-		room.rundenAktiv = false;
-		spieler.score += 1;
-		room.log = ⚡ ${spieler.name} war am schnellsten! (+1 Punkt);
+		const spieler = room.players.find(p => p.id === socket.id);
+		if (!spieler) return;
 		
-		// Erfolgs-Feedback gezielt an diesen einen Client senden
-		socket.emit('successFeedback');
-		if (spieler.score >= 10) {
-			room.winner = spieler.name;
-			room.log = 👑 ${spieler.name} GEWINNT DAS SPIEL! 👑;
-		
-			io.emit('roomUpdate', room);
-			setTimeout(() => { 
-				room.active = false; 
-				io.emit('roomUpdate', room); 		
+		if (colorId === room.zielFarbe.id)	{
+			room.rundenAktiv = false;
+			spieler.score += 1;
+			room.log = `⚡ ${spieler.name} war am schnellsten! (+1 Punkt)`;
+			
+			socket.emit('successFeedback');
+			if (spieler.score >= 10) {
+				room.winner = spieler.name;
+				room.log = `👑 ${spieler.name} GEWINNT DAS SPIEL! 👑`;
+			
+				io.emit('roomUpdate', room);
+				setTimeout(() => { 
+					room.active = false; 
+					io.emit('roomUpdate', room); 		
 				}, 5000);
-		} 
-		else {
-			io.emit('roomUpdate', room);starteNaechstenBlitz();
+			} else {
+				io.emit('roomUpdate', room);
+				starteNaechstenBlitz();
+			}
+		} else {
+			spieler.score -= 1;
+			room.log = `❌ ${spieler.name} hat falsch gedrückt! (-1 Punkt)`;
+			io.emit('roomUpdate', room);
 		}
-	
-	} 
-	else {
-		// FALSCHE FARBE
-		spieler.score -= 1;
-		room.log = ❌ ${spieler.name} hat falsch gedrückt! (-1 Punkt);
-		io.emit('roomUpdate', room);
-		}
-	}
-	);
+	});
 		
 	socket.on('disconnect', () => {
 		const index = room.players.findIndex(p => p.id === socket.id);
 		if(index !== -1) {
-			room.log = ${room.players[index].name} hat das Spiel verlassen.;
+			room.log = `${room.players[index].name} hat das Spiel verlassen.`;
 			room.players.splice(index, 1);
 			
-			if(room.players.length < 2) {room.active = false;
-			clearTimeout(rundenTimer);}io.emit('roomUpdate', room);
+			if(room.players.length < 2) {
+				room.active = false;
+				clearTimeout(rundenTimer);
+			}
+			io.emit('roomUpdate', room);
 		}
-	}
-	);
-}
-);
+	});
+});
 			
 function starteNaechstenBlitz() {
 	room.rundenAktiv = false;
 	room.zielFarbe = null;
 	const verzoegerung = Math.floor(Math.random() * 3000) + 2000;
-	
 	rundenTimer = setTimeout(() => {
-		if (!room.active || room.winner) 
-		return;
-		
+		if (!room.active || room.winner) return;
 		const zufallsIndex = Math.floor(Math.random() * FARBEN.length);
 		room.zielFarbe = FARBEN[zufallsIndex];
 		room.rundenAktiv = true;
 		room.log = "JETZT DRÜCKEN!";
-		o.emit('roomUpdate', room);
-		
+		io.emit('roomUpdate', room);
 	}, verzoegerung);
-	}
+}
 
 http.listen(PORT, '0.0.0.0', () => {
-    console.log(`Spiel-Server läuft auf Port ${PORT}`);
-});
+	console.log(Spiel-Server läuft auf Port ${PORT});
+	}
+);
